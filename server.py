@@ -1,5 +1,5 @@
 """
-Flask server with session-based login + bot API.
+Flask server — AlphaBot dashboard + settings API.
 """
 
 import threading
@@ -7,16 +7,13 @@ import time
 import logging
 from datetime import datetime
 from functools import wraps
-from flask import Flask, jsonify, send_from_directory, request, session, redirect, url_for
+from flask import Flask, jsonify, send_from_directory, request, session, redirect
 from flask_cors import CORS
 import bot as trading_bot
 
 app = Flask(__name__, static_folder="static")
-app.secret_key = trading_bot.os.getenv("SECRET_KEY", "change-me-in-production-please")
+app.secret_key = trading_bot.os.getenv("SECRET_KEY", "change-me-in-prod")
 CORS(app)
-
-DASHBOARD_USER     = trading_bot.os.getenv("DASHBOARD_USER", "lennert")
-DASHBOARD_PASSWORD = trading_bot.os.getenv("DASHBOARD_PASSWORD", "alphabot2024")
 
 log = logging.getLogger(__name__)
 
@@ -26,11 +23,10 @@ _bot_thread  = None
 _bot_running = False
 _bot_lock    = threading.Lock()
 _activity_log = []
-_MAX_LOG = 300
 
 def _push_log(msg: str, kind: str = "info"):
     _activity_log.append({"time": datetime.now().strftime("%H:%M:%S"), "message": msg, "type": kind})
-    if len(_activity_log) > _MAX_LOG:
+    if len(_activity_log) > 300:
         _activity_log.pop(0)
 
 class UIHandler(logging.Handler):
@@ -57,16 +53,18 @@ def login_required(f):
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    error = ""
-    if request.method == "POST":
-        if (request.form.get("username") == DASHBOARD_USER and
-                request.form.get("password") == DASHBOARD_PASSWORD):
-            session["logged_in"] = True
-            session.permanent = True
+    if request.method == "GET":
+        if session.get("logged_in"):
             return redirect("/")
-        error = "Invalid username or password"
-    return send_from_directory("static", "login.html") if not error else \
-           send_from_directory("static", "login.html"), 401
+        return send_from_directory("static", "login.html")
+
+    s = trading_bot.load_settings()
+    if (request.form.get("username") == s["dashboard_user"] and
+            request.form.get("password") == s["dashboard_password"]):
+        session["logged_in"] = True
+        session.permanent = True
+        return redirect("/")
+    return send_from_directory("static", "login.html"), 401
 
 @app.route("/logout")
 def logout():
@@ -80,23 +78,30 @@ def _scheduler_loop():
     import schedule as sched
     sched.clear()
 
-    sched.every(30).minutes.do(trading_bot.scan_and_trade)
+    def _reschedule():
+        """Rebuild schedule from current settings."""
+        sched.clear()
+        interval = trading_bot.load_settings().get("scan_interval_min", 30)
+        sched.every(interval).minutes.do(trading_bot.scan_and_trade)
 
-    for day in ["monday","tuesday","wednesday","thursday","friday"]:
-        getattr(sched.every(), day).at("20:45").do(trading_bot.end_of_day_run)
+        eod_time = trading_bot.load_settings().get("eod_time", "20:45")
+        for day in ["monday","tuesday","wednesday","thursday","friday"]:
+            getattr(sched.every(), day).at(eod_time).do(trading_bot.end_of_day_run)
 
-    sched.every().hour.do(trading_bot.print_portfolio_summary)
+        sched.every().hour.do(trading_bot.print_portfolio_summary)
+        sched.every(60).minutes.do(_reschedule)  # reload settings every hour
+        _push_log(f"Scheduler active — scanning every {interval} min | EOD at {eod_time}", "info")
 
-    _push_log("24/7 scheduler started — crypto always on, stocks during NYSE hours", "info")
+    _reschedule()
 
     while _bot_running:
         sched.run_pending()
-        time.sleep(30)
+        time.sleep(20)
 
     sched.clear()
-    _push_log("Scheduler stopped", "warn")
+    _push_log("Bot stopped", "warn")
 
-# ── API ───────────────────────────────────────────────────────────────────────
+# ── API: account / positions / orders ─────────────────────────────────────────
 
 @app.route("/api/account")
 @login_required
@@ -140,11 +145,8 @@ def api_orders():
         result = []
         for o in trading_bot.get_open_orders():
             result.append({
-                "id":     str(o.id),
-                "symbol": o.symbol,
-                "side":   str(o.side),
-                "qty":    str(o.qty),
-                "status": str(o.status),
+                "id": str(o.id), "symbol": o.symbol,
+                "side": str(o.side), "qty": str(o.qty), "status": str(o.status),
             })
         return jsonify(result)
     except Exception as e:
@@ -154,15 +156,15 @@ def api_orders():
 @login_required
 def api_scan():
     try:
-        results = []
+        s = trading_bot.load_settings()
         market_open = trading_bot.is_market_open()
-        for sym in trading_bot.UNIVERSE:
-            tradeable = trading_bot.is_crypto(sym) or market_open
+        results = []
+        for sym in trading_bot.get_universe():
             score, signals = trading_bot.score_symbol(sym)
             results.append({
                 "symbol":    sym,
                 "is_crypto": trading_bot.is_crypto(sym),
-                "tradeable": tradeable,
+                "tradeable": trading_bot.is_crypto(sym) or market_open,
                 "score":     score,
                 "signals":   signals,
             })
@@ -171,13 +173,17 @@ def api_scan():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# ── API: bot control ──────────────────────────────────────────────────────────
+
 @app.route("/api/bot/status")
 @login_required
 def api_bot_status():
+    s = trading_bot.load_settings()
     return jsonify({
-        "running":      _bot_running,
-        "market_open":  trading_bot.is_market_open(),
-        "positions":    len(trading_bot.get_positions()),
+        "running":     _bot_running,
+        "market_open": trading_bot.is_market_open(),
+        "positions":   len(trading_bot.get_positions()),
+        "scan_interval": s.get("scan_interval_min", 30),
     })
 
 @app.route("/api/bot/start", methods=["POST"])
@@ -196,8 +202,7 @@ def api_bot_start():
 @login_required
 def api_bot_stop():
     global _bot_running
-    with _bot_lock:
-        _bot_running = False
+    _bot_running = False
     return jsonify({"status": "stopped"})
 
 @app.route("/api/bot/scan", methods=["POST"])
@@ -224,17 +229,62 @@ def api_bot_close_all():
 def api_log():
     return jsonify(list(reversed(_activity_log)))
 
+# ── API: settings ─────────────────────────────────────────────────────────────
+
+@app.route("/api/settings", methods=["GET"])
+@login_required
+def api_settings_get():
+    return jsonify(trading_bot.load_settings())
+
+@app.route("/api/settings", methods=["POST"])
+@login_required
+def api_settings_post():
+    try:
+        current = trading_bot.load_settings()
+        updates = request.json
+
+        # Type coercion & validation
+        num_fields = ["max_capital","position_size","take_profit_pct",
+                      "stop_loss_pct","scan_interval_min","long_threshold","short_threshold"]
+        bool_fields = ["enable_stocks","enable_crypto","enable_memecoins",
+                       "enable_shorts","eod_close_stocks"]
+        str_fields  = ["eod_time","dashboard_user","dashboard_password"]
+        list_fields = ["stock_universe","crypto_universe"]
+
+        for k in num_fields:
+            if k in updates:
+                current[k] = float(updates[k]) if "pct" in k else \
+                              int(updates[k])   if k in ["scan_interval_min","long_threshold","short_threshold"] else \
+                              float(updates[k])
+        for k in bool_fields:
+            if k in updates:
+                current[k] = bool(updates[k])
+        for k in str_fields:
+            if k in updates and updates[k]:
+                current[k] = str(updates[k])
+        for k in list_fields:
+            if k in updates:
+                current[k] = [s.strip().upper() for s in updates[k] if s.strip()]
+
+        trading_bot.save_settings(current)
+        _push_log("⚙️ Settings updated", "warn")
+        return jsonify({"status": "saved", "settings": current})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+# ── Pages ─────────────────────────────────────────────────────────────────────
+
 @app.route("/")
 @login_required
 def index():
     return send_from_directory("static", "index.html")
 
-@app.route("/login")
-def login_page():
-    if session.get("logged_in"):
-        return redirect("/")
-    return send_from_directory("static", "login.html")
+@app.route("/settings")
+@login_required
+def settings_page():
+    return send_from_directory("static", "settings.html")
 
 if __name__ == "__main__":
-    _push_log("AlphaBot dashboard started", "info")
-    app.run(host="0.0.0.0", port=5050, debug=False)
+    _push_log("AlphaBot started", "info")
+    port = int(trading_bot.os.getenv("PORT", 5050))
+    app.run(host="0.0.0.0", port=port, debug=False)

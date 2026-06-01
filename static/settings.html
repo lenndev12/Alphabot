@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AlphaBot — Settings</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0d1117; --surface: #161b22; --surface2: #1c2330;
+      --border: #30363d; --text: #e6edf3; --muted: #8b949e;
+      --green: #3fb950; --red: #f85149; --yellow: #d29922;
+      --blue: #58a6ff; --purple: #bc8cff; --orange: #f0883e;
+      --radius: 10px;
+    }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; font-size: 14px; min-height: 100vh; }
+
+    /* Nav */
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 28px; border-bottom: 1px solid var(--border);
+      background: var(--surface); position: sticky; top: 0; z-index: 100;
+    }
+    .header-left { display: flex; align-items: center; gap: 20px; }
+    header h1 { font-size: 17px; font-weight: 800; }
+    header h1 span { color: var(--blue); }
+    nav { display: flex; gap: 4px; }
+    nav a {
+      padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: 600;
+      color: var(--muted); text-decoration: none; transition: all .15s;
+    }
+    nav a:hover { color: var(--text); background: var(--border); }
+    nav a.active { color: var(--blue); background: #1c2a3a; }
+    .btn-logout { padding: 6px 13px; border-radius: 6px; background: var(--border); color: var(--muted); border: none; font-size: 12px; cursor: pointer; }
+    .btn-logout:hover { color: var(--text); }
+
+    main { max-width: 860px; margin: 0 auto; padding: 28px 28px; display: grid; gap: 20px; }
+
+    /* Toast */
+    #toast {
+      position: fixed; bottom: 28px; right: 28px; z-index: 999;
+      padding: 12px 20px; border-radius: 8px; font-size: 13px; font-weight: 600;
+      background: var(--green); color: #000; opacity: 0;
+      transform: translateY(10px); transition: all .3s;
+    }
+    #toast.show { opacity: 1; transform: translateY(0); }
+    #toast.error { background: var(--red); color: #fff; }
+
+    /* Cards */
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px 24px; }
+    .card-title { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+    .card-desc  { font-size: 12px; color: var(--muted); margin-bottom: 20px; }
+
+    /* Form grid */
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
+    .form-grid.three { grid-template-columns: 1fr 1fr 1fr; }
+
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); }
+    .field .hint  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    input[type="number"], input[type="text"], input[type="password"], input[type="time"], select {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 7px;
+      padding: 9px 12px; color: var(--text); font-size: 14px; outline: none;
+      transition: border-color .2s; width: 100%;
+    }
+    input:focus, select:focus { border-color: var(--blue); }
+
+    /* Toggle switch */
+    .toggle-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 13px 16px; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .toggle-info { display: flex; flex-direction: column; gap: 2px; }
+    .toggle-info span { font-size: 13px; font-weight: 600; }
+    .toggle-info small { font-size: 11px; color: var(--muted); }
+    .switch { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; inset: 0; background: var(--border);
+      border-radius: 999px; cursor: pointer; transition: .3s;
+    }
+    .slider::before {
+      content: ""; position: absolute; width: 18px; height: 18px;
+      left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: .3s;
+    }
+    .switch input:checked + .slider { background: var(--blue); }
+    .switch input:checked + .slider::before { transform: translateX(20px); }
+
+    /* Universe textarea */
+    .universe-box {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 7px;
+      padding: 10px 12px; color: var(--text); font-size: 13px; font-family: 'JetBrains Mono', monospace;
+      width: 100%; min-height: 100px; resize: vertical; outline: none; line-height: 1.6;
+    }
+    .universe-box:focus { border-color: var(--blue); }
+
+    /* Save button */
+    .save-row { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+    .btn-save {
+      padding: 10px 28px; background: var(--blue); color: #000;
+      border: none; border-radius: 7px; font-size: 14px; font-weight: 700;
+      cursor: pointer; transition: opacity .15s;
+    }
+    .btn-save:hover { opacity: .85; }
+    .btn-reset { padding: 10px 18px; background: var(--border); color: var(--muted); border: none; border-radius: 7px; font-size: 13px; cursor: pointer; }
+    .btn-reset:hover { color: var(--text); }
+
+    .section-divider { border: none; border-top: 1px solid var(--border); margin: 4px 0; }
+
+    .danger-zone { border-color: #4a2a2a; }
+    .danger-zone .card-title { color: var(--red); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>⚡ <span>AlphaBot</span></h1>
+    <nav>
+      <a href="/">📊 Dashboard</a>
+      <a href="/settings" class="active">⚙️ Settings</a>
+    </nav>
+  </div>
+  <button class="btn-logout" onclick="window.location='/logout'">Sign out</button>
+</header>
+
+<main>
+
+  <!-- Capital & Risk -->
+  <div class="card">
+    <div class="card-title">💰 Capital & Position Sizing</div>
+    <div class="card-desc">Controls how much money the bot deploys and how it sizes each trade.</div>
+    <div class="form-grid">
+      <div class="field">
+        <label>Max Capital ($)</label>
+        <input type="number" id="max_capital" min="100" step="100" />
+        <span class="hint">Hard cap — bot never deploys more than this total</span>
+      </div>
+      <div class="field">
+        <label>Position Size ($)</label>
+        <input type="number" id="position_size" min="1" step="10" />
+        <span class="hint">Dollar amount per individual trade</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- TP/SL -->
+  <div class="card">
+    <div class="card-title">🎯 Take Profit & Stop Loss</div>
+    <div class="card-desc">Positions are automatically closed when these thresholds are hit.</div>
+    <div class="form-grid">
+      <div class="field">
+        <label>Take Profit (%)</label>
+        <input type="number" id="take_profit_pct" min="0.1" max="100" step="0.1" />
+        <span class="hint">Close trade when profit reaches this %</span>
+      </div>
+      <div class="field">
+        <label>Stop Loss (%)</label>
+        <input type="number" id="stop_loss_pct" min="0.1" max="100" step="0.1" />
+        <span class="hint">Close trade when loss reaches this %</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scan & Schedule -->
+  <div class="card">
+    <div class="card-title">⏱️ Scan Interval & Schedule</div>
+    <div class="card-desc">How often the bot scans for signals and when it closes stock positions.</div>
+    <div class="form-grid">
+      <div class="field">
+        <label>Scan Interval (minutes)</label>
+        <input type="number" id="scan_interval_min" min="1" max="240" step="1" />
+        <span class="hint">How often the bot scans for new trades (crypto 24/7, stocks only during NYSE hours)</span>
+      </div>
+      <div class="field">
+        <label>EOD Close Time (CEST)</label>
+        <input type="time" id="eod_time" />
+        <span class="hint">Time to auto-close all stock positions (leave crypto running)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Signal thresholds -->
+  <div class="card">
+    <div class="card-title">📡 Signal Thresholds</div>
+    <div class="card-desc">Scores are out of 6. Adjust to be more selective (higher long / lower short) or more aggressive (lower long / higher short).</div>
+    <div class="form-grid">
+      <div class="field">
+        <label>Long Threshold (score ≥)</label>
+        <input type="number" id="long_threshold" min="1" max="6" step="1" />
+        <span class="hint">Min score to go LONG. Lower = more long trades</span>
+      </div>
+      <div class="field">
+        <label>Short Threshold (score ≤)</label>
+        <input type="number" id="short_threshold" min="0" max="5" step="1" />
+        <span class="hint">Max score to go SHORT. Higher = more short trades</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toggles -->
+  <div class="card">
+    <div class="card-title">🔀 Trading Switches</div>
+    <div class="card-desc">Enable or disable entire asset classes and trade directions.</div>
+    <div style="display:grid;gap:10px">
+      <div class="toggle-row">
+        <div class="toggle-info"><span>📈 Trade Stocks</span><small>NYSE hours only · 14:30–21:00 CEST</small></div>
+        <label class="switch"><input type="checkbox" id="enable_stocks" /><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div class="toggle-info"><span>🪙 Trade Crypto</span><small>BTC, ETH, SOL, AVAX and more — 24/7</small></div>
+        <label class="switch"><input type="checkbox" id="enable_crypto" /><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div class="toggle-info"><span>🐕 Trade Memecoins</span><small>DOGE, SHIB — 24/7 (part of crypto universe)</small></div>
+        <label class="switch"><input type="checkbox" id="enable_memecoins" /><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div class="toggle-info"><span>▼ Allow Short Selling</span><small>Bet on falling prices — requires margin enabled on Alpaca</small></div>
+        <label class="switch"><input type="checkbox" id="enable_shorts" /><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div class="toggle-info"><span>🔔 Auto-close Stocks at EOD</span><small>Automatically closes all stock positions at the EOD time above</small></div>
+        <label class="switch"><input type="checkbox" id="eod_close_stocks" /><span class="slider"></span></label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stock universe -->
+  <div class="card">
+    <div class="card-title">📈 Stock Universe</div>
+    <div class="card-desc">One ticker per line. Bot will only trade stocks in this list.</div>
+    <div class="field">
+      <textarea class="universe-box" id="stock_universe" rows="8"></textarea>
+      <span class="hint">Use valid US stock tickers (e.g. AAPL, TSLA, SPY). Changes take effect on next scan.</span>
+    </div>
+  </div>
+
+  <!-- Crypto universe -->
+  <div class="card">
+    <div class="card-title">🪙 Crypto Universe</div>
+    <div class="card-desc">One symbol per line in BASE/USD format. Alpaca supports major coins + some memecoins.</div>
+    <div class="field">
+      <textarea class="universe-box" id="crypto_universe" rows="6"></textarea>
+      <span class="hint">Format: BTC/USD, ETH/USD, DOGE/USD, SHIB/USD etc. Must be supported by Alpaca.</span>
+    </div>
+  </div>
+
+  <!-- Login credentials -->
+  <div class="card danger-zone">
+    <div class="card-title">🔐 Dashboard Login</div>
+    <div class="card-desc">Change your username and password. You will be logged out after saving.</div>
+    <div class="form-grid">
+      <div class="field">
+        <label>Username</label>
+        <input type="text" id="dashboard_user" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label>New Password</label>
+        <input type="password" id="dashboard_password" placeholder="Leave blank to keep current" autocomplete="new-password" />
+      </div>
+    </div>
+  </div>
+
+  <!-- Save -->
+  <div class="save-row">
+    <button class="btn-reset" onclick="loadSettings()">↺ Reset changes</button>
+    <button class="btn-save" onclick="saveSettings()">💾 Save all settings</button>
+  </div>
+
+</main>
+
+<div id="toast">Settings saved!</div>
+
+<script>
+  let _original = {};
+
+  async function loadSettings() {
+    const s = await (await fetch('/api/settings')).json();
+    _original = JSON.parse(JSON.stringify(s));
+
+    // Numbers
+    document.getElementById('max_capital').value       = s.max_capital;
+    document.getElementById('position_size').value     = s.position_size;
+    document.getElementById('take_profit_pct').value   = s.take_profit_pct;
+    document.getElementById('stop_loss_pct').value     = s.stop_loss_pct;
+    document.getElementById('scan_interval_min').value = s.scan_interval_min;
+    document.getElementById('long_threshold').value    = s.long_threshold;
+    document.getElementById('short_threshold').value   = s.short_threshold;
+    document.getElementById('eod_time').value          = s.eod_time;
+
+    // Booleans
+    document.getElementById('enable_stocks').checked     = s.enable_stocks;
+    document.getElementById('enable_crypto').checked     = s.enable_crypto;
+    document.getElementById('enable_memecoins').checked  = s.enable_memecoins;
+    document.getElementById('enable_shorts').checked     = s.enable_shorts;
+    document.getElementById('eod_close_stocks').checked  = s.eod_close_stocks;
+
+    // Universes
+    document.getElementById('stock_universe').value  = s.stock_universe.join('\n');
+    document.getElementById('crypto_universe').value = s.crypto_universe.join('\n');
+
+    // Credentials
+    document.getElementById('dashboard_user').value     = s.dashboard_user;
+    document.getElementById('dashboard_password').value = '';
+  }
+
+  async function saveSettings() {
+    const pwField = document.getElementById('dashboard_password').value;
+    const credChanged = pwField.length > 0 ||
+      document.getElementById('dashboard_user').value !== _original.dashboard_user;
+
+    const payload = {
+      max_capital:       parseFloat(document.getElementById('max_capital').value),
+      position_size:     parseFloat(document.getElementById('position_size').value),
+      take_profit_pct:   parseFloat(document.getElementById('take_profit_pct').value),
+      stop_loss_pct:     parseFloat(document.getElementById('stop_loss_pct').value),
+      scan_interval_min: parseInt(document.getElementById('scan_interval_min').value),
+      long_threshold:    parseInt(document.getElementById('long_threshold').value),
+      short_threshold:   parseInt(document.getElementById('short_threshold').value),
+      eod_time:          document.getElementById('eod_time').value,
+
+      enable_stocks:     document.getElementById('enable_stocks').checked,
+      enable_crypto:     document.getElementById('enable_crypto').checked,
+      enable_memecoins:  document.getElementById('enable_memecoins').checked,
+      enable_shorts:     document.getElementById('enable_shorts').checked,
+      eod_close_stocks:  document.getElementById('eod_close_stocks').checked,
+
+      stock_universe:    document.getElementById('stock_universe').value
+                           .split('\n').map(s => s.trim()).filter(Boolean),
+      crypto_universe:   document.getElementById('crypto_universe').value
+                           .split('\n').map(s => s.trim()).filter(Boolean),
+
+      dashboard_user:    document.getElementById('dashboard_user').value,
+    };
+
+    if (pwField) payload.dashboard_password = pwField;
+
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || 'Unknown error');
+
+      showToast('✅ Settings saved!', false);
+      if (credChanged) {
+        setTimeout(() => { window.location.href = '/logout'; }, 1200);
+      } else {
+        loadSettings();
+      }
+    } catch(e) {
+      showToast('❌ ' + e.message, true);
+    }
+  }
+
+  function showToast(msg, isError) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className   = 'show' + (isError ? ' error' : '');
+    setTimeout(() => { t.className = ''; }, 3000);
+  }
+
+  loadSettings();
+</script>
+</body>
+</html>
