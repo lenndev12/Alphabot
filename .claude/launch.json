@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "trading-bot",
+      "runtimeExecutable": "/Users/lennertdevlaminck/trading-bot/venv/bin/python3",
+      "runtimeArgs": ["server.py"],
+      "port": 5050
+    }
+  ]
+}

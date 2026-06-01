@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AlphaBot — Login</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0d1117; --surface: #161b22; --border: #30363d;
+      --text: #e6edf3; --muted: #8b949e; --blue: #58a6ff; --red: #f85149;
+    }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: 'Inter', system-ui, sans-serif;
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    }
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 40px 36px; width: 100%; max-width: 380px;
+    }
+    .logo { text-align: center; margin-bottom: 28px; }
+    .logo h1 { font-size: 24px; font-weight: 800; }
+    .logo h1 span { color: var(--blue); }
+    .logo p { color: var(--muted); font-size: 13px; margin-top: 6px; }
+
+    label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 6px; letter-spacing: .5px; text-transform: uppercase; }
+    input {
+      width: 100%; background: #0d1117; border: 1px solid var(--border);
+      border-radius: 7px; padding: 10px 14px; color: var(--text); font-size: 14px;
+      outline: none; transition: border-color .2s;
+    }
+    input:focus { border-color: var(--blue); }
+    .field { margin-bottom: 18px; }
+
+    button {
+      width: 100%; padding: 11px; background: var(--blue); color: #000;
+      border: none; border-radius: 7px; font-size: 14px; font-weight: 700;
+      cursor: pointer; margin-top: 4px; transition: opacity .15s;
+    }
+    button:hover { opacity: .85; }
+
+    .error {
+      background: #2b1c1c; border: 1px solid #4a2a2a; color: var(--red);
+      border-radius: 7px; padding: 10px 14px; font-size: 13px;
+      margin-bottom: 18px; display: none;
+    }
+    .error.show { display: block; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <h1>⚡ <span>AlphaBot</span></h1>
+    <p>24/7 Scalping Dashboard</p>
+  </div>
+
+  <div id="error-box" class="error">Invalid username or password</div>
+
+  <form id="login-form">
+    <div class="field">
+      <label>Username</label>
+      <input type="text" id="username" name="username" autocomplete="username" placeholder="lennert" required />
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="password" name="password" autocomplete="current-password" placeholder="••••••••" required />
+    </div>
+    <button type="submit">Sign In →</button>
+  </form>
+</div>
+
+<script>
+  document.getElementById('login-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const form = new FormData(e.target);
+    const res  = await fetch('/login', { method: 'POST', body: form });
+    if (res.ok && res.url.endsWith('/') || res.redirected) {
+      window.location.href = '/';
+    } else {
+      document.getElementById('error-box').classList.add('show');
+    }
+  });
+</script>
+</body>
+</html>

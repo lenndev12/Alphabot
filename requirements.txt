@@ -1,0 +1,12 @@
+alpaca-py>=0.18.0
+pandas>=2.0.0
+numpy>=1.24.0
+ta>=0.11.0
+yfinance>=0.2.36
+schedule>=1.2.0
+python-dotenv>=1.0.0
+requests>=2.31.0
+flask>=3.0.0
+flask-cors>=4.0.0
+flask-login>=0.6.3
+gunicorn>=21.2.0

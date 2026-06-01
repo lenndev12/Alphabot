@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AlphaBot — Live Dashboard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0d1117; --surface: #161b22; --border: #30363d;
+      --text: #e6edf3; --muted: #8b949e;
+      --green: #3fb950; --red: #f85149; --yellow: #d29922;
+      --blue: #58a6ff; --purple: #bc8cff; --orange: #f0883e;
+      --radius: 10px; --font: 'Inter', system-ui, sans-serif;
+    }
+    body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; }
+
+    /* Header */
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 28px; border-bottom: 1px solid var(--border); background: var(--surface);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .header-left { display: flex; align-items: center; gap: 16px; }
+    header h1 { font-size: 17px; font-weight: 800; }
+    header h1 span { color: var(--blue); }
+    .header-meta { font-size: 11px; color: var(--muted); line-height: 1.7; }
+    .header-right { display: flex; align-items: center; gap: 12px; }
+
+    .status-pill {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 5px 13px; border-radius: 999px; font-size: 12px; font-weight: 600;
+      background: #1c2b1c; color: var(--green); border: 1px solid #2a4a2a;
+    }
+    .status-pill.off { background: #2b1c1c; color: var(--red); border-color: #4a2a2a; }
+    .status-pill .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: pulse 2s infinite; }
+    .status-pill.off .dot { animation: none; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    .market-badge {
+      padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 600;
+      background: #1c3a1c; color: var(--green); border: 1px solid #2a4a2a;
+    }
+    .market-badge.closed { background: #2a2a1c; color: var(--yellow); border-color: #4a4a2a; }
+
+    .btn-logout {
+      padding: 6px 13px; border-radius: 6px; background: var(--border);
+      color: var(--muted); border: none; font-size: 12px; cursor: pointer;
+    }
+    .btn-logout:hover { color: var(--text); }
+
+    main { padding: 20px 28px; display: grid; gap: 16px; }
+
+    /* Strategy bar */
+    .strategy-bar {
+      display: flex; gap: 0; flex-wrap: wrap;
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .stat-item {
+      padding: 10px 18px; border-right: 1px solid var(--border);
+      font-size: 12px; color: var(--muted);
+    }
+    .stat-item:last-child { border-right: none; }
+    .stat-item strong { color: var(--text); display: block; font-size: 14px; margin-top: 1px; }
+
+    /* Cards */
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; }
+    .card-title { font-size: 11px; font-weight: 600; letter-spacing: .8px; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
+
+    /* KPIs */
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+    .kpi { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 13px 15px; }
+    .kpi-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+    .kpi-value { font-size: 20px; font-weight: 700; }
+    .kpi-sub   { font-size: 11px; color: var(--muted); margin-top: 3px; }
+    .up { color: var(--green); } .down { color: var(--red); }
+
+    /* Controls */
+    .controls { display: flex; gap: 9px; flex-wrap: wrap; }
+    button {
+      padding: 8px 15px; border-radius: 7px; border: none; font-size: 13px;
+      font-weight: 600; cursor: pointer; transition: opacity .15s, transform .1s;
+    }
+    button:hover { opacity: .85; } button:active { transform: scale(.97); }
+    .btn-primary { background: var(--blue);   color: #000; }
+    .btn-danger  { background: var(--red);    color: #fff; }
+    .btn-warn    { background: var(--yellow); color: #000; }
+    .btn-ghost   { background: var(--border); color: var(--text); }
+    .btn-purple  { background: var(--purple); color: #000; }
+    .btn-orange  { background: var(--orange); color: #000; }
+    button:disabled { opacity: .35; cursor: not-allowed; }
+
+    .refresh-row { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
+    .refresh-row span { font-size: 11px; color: var(--muted); }
+
+    /* Tables */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; font-size: 11px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; color: var(--muted); padding: 7px 10px; border-bottom: 1px solid var(--border); }
+    td { padding: 9px 10px; border-bottom: 1px solid #1e252e; font-variant-numeric: tabular-nums; font-size: 13px; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #1a2030; }
+
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; }
+    .badge-long   { background: #1c3a1c; color: var(--green); }
+    .badge-short  { background: #3a1c1c; color: var(--red); }
+    .badge-crypto { background: #1c2a3a; color: var(--blue); }
+    .badge-stock  { background: #2a1c3a; color: var(--purple); }
+    .badge-hold   { background: #2a2a1c; color: var(--yellow); }
+    .badge-dim    { background: #1e252e; color: var(--muted); }
+
+    /* Score bar */
+    .score-bar-wrap { display: flex; align-items: center; gap: 8px; }
+    .score-bar { flex: 1; height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
+    .score-bar-fill { height: 100%; border-radius: 3px; transition: width .4s; }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 14px; }
+    .tab {
+      padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer;
+      color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px;
+      background: none; border-top: none; border-left: none; border-right: none;
+    }
+    .tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+
+    /* Log */
+    #log-box {
+      background: #090d13; border: 1px solid var(--border); border-radius: 8px;
+      padding: 12px 14px; height: 200px; overflow-y: auto;
+      font-family: 'JetBrains Mono','Fira Code',monospace; font-size: 12px; line-height: 1.7;
+    }
+    .log-info { color: var(--muted); } .log-warn { color: var(--yellow); } .log-error { color: var(--red); }
+    .log-time { color: #3a4a5a; margin-right: 8px; }
+
+    .empty { color: var(--muted); text-align: center; padding: 28px 0; font-size: 13px; }
+    .spin { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--border); border-top-color: var(--blue); border-radius: 50%; animation: rotate .7s linear infinite; vertical-align: middle; margin-right: 5px; }
+    @keyframes rotate { to { transform: rotate(360deg); } }
+
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 860px) { .two-col { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>⚡ <span>AlphaBot</span></h1>
+    <div class="header-meta">
+      Stocks · Crypto · Memecoins · 24/7<br>
+      $100/trade · +2% TP · −1% SL · $5K cap
+    </div>
+  </div>
+  <div class="header-right">
+    <div id="market-badge" class="market-badge closed">NYSE Closed</div>
+    <div id="bot-status" class="status-pill off">
+      <span class="dot"></span><span id="status-text">Bot Stopped</span>
+    </div>
+    <button class="btn-logout" onclick="window.location='/logout'">Sign out</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- Strategy bar -->
+  <div class="strategy-bar">
+    <div class="stat-item">Capital cap<strong>$5,000</strong></div>
+    <div class="stat-item">Per trade<strong>$100</strong></div>
+    <div class="stat-item">Max trades<strong>~50</strong></div>
+    <div class="stat-item">Take profit<strong>+2%</strong></div>
+    <div class="stat-item">Stop loss<strong>−1%</strong></div>
+    <div class="stat-item">Scan interval<strong>30 min</strong></div>
+    <div class="stat-item">Long threshold<strong>≥ 4/6</strong></div>
+    <div class="stat-item">Short threshold<strong>≤ 1/6</strong></div>
+    <div class="stat-item">Universe<strong id="universe-count">—</strong></div>
+    <div class="stat-item">Next scan<strong id="next-scan">—</strong></div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="card">
+    <div class="card-title">Portfolio Overview</div>
+    <div class="kpi-grid">
+      <div class="kpi">
+        <div class="kpi-label">Equity</div>
+        <div class="kpi-value" id="kpi-equity">—</div>
+        <div class="kpi-sub">total account</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Cash</div>
+        <div class="kpi-value" id="kpi-cash">—</div>
+        <div class="kpi-sub">uninvested</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Deployed</div>
+        <div class="kpi-value" id="kpi-deployed">—</div>
+        <div class="kpi-sub">of $5K cap</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Open Positions</div>
+        <div class="kpi-value" id="kpi-positions">—</div>
+        <div class="kpi-sub" id="kpi-ls-sub">— stocks · — crypto</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Long / Short</div>
+        <div class="kpi-value" id="kpi-ls">—</div>
+        <div class="kpi-sub">open trades</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Unrealised P/L</div>
+        <div class="kpi-value" id="kpi-pl">—</div>
+        <div class="kpi-sub" id="kpi-pl-sub">today</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="card">
+    <div class="card-title">Bot Controls</div>
+    <div class="controls">
+      <button class="btn-primary" id="btn-start"  onclick="startBot()">▶ Start 24/7 Bot</button>
+      <button class="btn-danger"  id="btn-stop"   onclick="stopBot()" disabled>■ Stop Bot</button>
+      <button class="btn-purple"  onclick="triggerScan()">⚡ Scan &amp; Trade Now</button>
+      <button class="btn-orange"  onclick="triggerEod()">📉 Close Stocks (EOD)</button>
+      <button class="btn-danger"  onclick="triggerCloseAll()">🛑 Close Everything</button>
+      <button class="btn-ghost"   id="btn-sigref" onclick="runSignalScan()">🔍 Refresh Signals</button>
+    </div>
+    <div class="refresh-row">
+      <span id="last-refresh">—</span>
+      <span>Auto-refreshes every 15 s</span>
+    </div>
+  </div>
+
+  <!-- Positions + Orders -->
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title">Open Positions</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Symbol</th><th>Type</th><th>Dir</th><th>Entry</th><th>Now</th><th>P/L</th><th>%</th></tr></thead>
+          <tbody id="positions-body"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Open Orders</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Symbol</th><th>Type</th><th>Side</th><th>Status</th></tr></thead>
+          <tbody id="orders-body"><tr><td colspan="4" class="empty">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Signal scanner -->
+  <div class="card">
+    <div class="card-title">Signal Scanner</div>
+    <div class="tabs">
+      <button class="tab active" onclick="filterScan('all', this)">All</button>
+      <button class="tab" onclick="filterScan('long', this)">▲ Longs</button>
+      <button class="tab" onclick="filterScan('short', this)">▼ Shorts</button>
+      <button class="tab" onclick="filterScan('crypto', this)">🪙 Crypto</button>
+      <button class="tab" onclick="filterScan('stocks', this)">📈 Stocks</button>
+    </div>
+    <div id="scan-loading" style="color:var(--muted);font-size:13px;padding:4px 0">
+      Click "Refresh Signals" to score all assets (takes ~45 s)…
+    </div>
+    <div class="table-wrap" id="scan-wrap" style="display:none">
+      <table>
+        <thead>
+          <tr>
+            <th>Symbol</th><th>Type</th><th>Signal</th><th>Score</th>
+            <th style="width:120px">Strength</th>
+            <th>RSI</th><th>5d%</th><th>20d%</th><th>Vol×</th><th>MACD↑</th><th>>SMA</th><th>Active</th>
+          </tr>
+        </thead>
+        <tbody id="scan-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Log -->
+  <div class="card">
+    <div class="card-title">Activity Log</div>
+    <div id="log-box"><span class="log-info">Waiting for activity…</span></div>
+  </div>
+
+</main>
+
+<script>
+  const fmt = (n, d=2) => n==null?'—':'$'+Number(n).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+  const pct = n => n==null?'—':(Number(n)>=0?'+':'')+Number(n).toFixed(2)+'%';
+  const cc  = n => Number(n)>=0?'up':'down';
+
+  let _scanData = [];
+  let _scanFilter = 'all';
+
+  // ── Refresh all ───────────────────────────────────────────────────────────
+
+  async function refreshAll() {
+    try {
+      const [accR, posR, ordR, stR] = await Promise.all([
+        fetch('/api/account'), fetch('/api/positions'),
+        fetch('/api/orders'),  fetch('/api/bot/status'),
+      ]);
+      const acc       = await accR.json();
+      const positions = await posR.json();
+      const orders    = await ordR.json();
+      const status    = await stR.json();
+
+      // KPIs
+      document.getElementById('kpi-equity').textContent = fmt(acc.equity);
+      document.getElementById('kpi-cash').textContent   = fmt(acc.cash);
+
+      if (Array.isArray(positions)) {
+        const stocks  = positions.filter(p => !p.is_crypto);
+        const cryptos = positions.filter(p =>  p.is_crypto);
+        const longs   = positions.filter(p =>  p.qty > 0);
+        const shorts  = positions.filter(p =>  p.qty < 0);
+        const totalPL = positions.reduce((s,p)=>s+p.unrealized_pl, 0);
+        const deployed= positions.reduce((s,p)=>s+Math.abs(p.market_value), 0);
+        const avgPct  = positions.length ? positions.reduce((s,p)=>s+p.unrealized_plpc,0)/positions.length : 0;
+
+        document.getElementById('kpi-positions').textContent = positions.length;
+        document.getElementById('kpi-ls-sub').textContent   = `${stocks.length} stocks · ${cryptos.length} crypto`;
+        document.getElementById('kpi-ls').textContent        = `${longs.length}L / ${shorts.length}S`;
+        document.getElementById('kpi-deployed').textContent  = fmt(Math.min(deployed,5000));
+
+        const plEl = document.getElementById('kpi-pl');
+        plEl.textContent = fmt(totalPL);
+        plEl.className   = 'kpi-value ' + cc(totalPL);
+        document.getElementById('kpi-pl-sub').textContent = pct(avgPct) + ' avg';
+
+        renderPositions(positions);
+      }
+
+      renderOrders(Array.isArray(orders) ? orders : []);
+
+      // Bot status
+      const pill = document.getElementById('bot-status');
+      const txt  = document.getElementById('status-text');
+      pill.className  = 'status-pill' + (status.running ? '' : ' off');
+      txt.textContent = status.running ? 'Bot Running' : 'Bot Stopped';
+      document.getElementById('btn-start').disabled = status.running;
+      document.getElementById('btn-stop').disabled  = !status.running;
+
+      // Market badge
+      const mb = document.getElementById('market-badge');
+      mb.textContent = status.market_open ? 'NYSE Open' : 'NYSE Closed';
+      mb.className   = 'market-badge' + (status.market_open ? '' : ' closed');
+
+      document.getElementById('last-refresh').textContent =
+        'Last refresh: ' + new Date().toLocaleTimeString('nl-BE');
+
+    } catch(e) { console.error(e); }
+
+    refreshLog();
+    updateNextScan();
+  }
+
+  // ── Render positions ──────────────────────────────────────────────────────
+
+  function renderPositions(positions) {
+    const tbody = document.getElementById('positions-body');
+    if (!positions.length) {
+      tbody.innerHTML = `<tr><td colspan="7" class="empty">No open positions</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = positions.map(p => {
+      const typeBadge = p.is_crypto
+        ? `<span class="badge badge-crypto">🪙 Crypto</span>`
+        : `<span class="badge badge-stock">📈 Stock</span>`;
+      const dirBadge = p.qty > 0
+        ? `<span class="badge badge-long">▲ LONG</span>`
+        : `<span class="badge badge-short">▼ SHORT</span>`;
+      return `<tr>
+        <td><strong>${p.symbol}</strong></td>
+        <td>${typeBadge}</td>
+        <td>${dirBadge}</td>
+        <td>${fmt(p.avg_entry)}</td>
+        <td>${fmt(p.current_price)}</td>
+        <td class="${cc(p.unrealized_pl)}">${fmt(p.unrealized_pl)}</td>
+        <td class="${cc(p.unrealized_plpc)}">${pct(p.unrealized_plpc)}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  function renderOrders(orders) {
+    const tbody = document.getElementById('orders-body');
+    if (!orders.length) {
+      tbody.innerHTML = `<tr><td colspan="4" class="empty">No open orders</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = orders.map(o => {
+      const isCrypto = o.symbol.includes('/');
+      const typeBadge = isCrypto
+        ? `<span class="badge badge-crypto">🪙</span>`
+        : `<span class="badge badge-stock">📈</span>`;
+      const dirBadge = o.side.includes('buy')
+        ? `<span class="badge badge-long">▲ LONG</span>`
+        : `<span class="badge badge-short">▼ SHORT</span>`;
+      return `<tr>
+        <td><strong>${o.symbol}</strong></td>
+        <td>${typeBadge}</td>
+        <td>${dirBadge}</td>
+        <td><span class="badge badge-dim">${o.status}</span></td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ── Signal scanner ────────────────────────────────────────────────────────
+
+  async function runSignalScan() {
+    document.getElementById('scan-loading').innerHTML =
+      '<span class="spin"></span> Scoring all assets — stocks + crypto + memecoins (~45 s)…';
+    document.getElementById('scan-loading').style.display = 'block';
+    document.getElementById('scan-wrap').style.display    = 'none';
+    document.getElementById('btn-sigref').disabled = true;
+
+    try {
+      _scanData = await (await fetch('/api/scan')).json();
+      document.getElementById('universe-count').textContent = _scanData.length + ' assets';
+      renderScan();
+      document.getElementById('scan-loading').style.display = 'none';
+      document.getElementById('scan-wrap').style.display    = 'block';
+    } catch(e) {
+      document.getElementById('scan-loading').innerHTML = '❌ Scan failed — check server log';
+    }
+    document.getElementById('btn-sigref').disabled = false;
+  }
+
+  function filterScan(filter, tabEl) {
+    _scanFilter = filter;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tabEl.classList.add('active');
+    renderScan();
+  }
+
+  function renderScan() {
+    if (!_scanData.length) return;
+    let rows = _scanData;
+    if (_scanFilter === 'long')   rows = rows.filter(r => r.score >= 4);
+    if (_scanFilter === 'short')  rows = rows.filter(r => r.score <= 1);
+    if (_scanFilter === 'crypto') rows = rows.filter(r => r.is_crypto);
+    if (_scanFilter === 'stocks') rows = rows.filter(r => !r.is_crypto);
+
+    const tbody = document.getElementById('scan-body');
+    if (!rows.length) {
+      tbody.innerHTML = `<tr><td colspan="12" class="empty">No results for this filter</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = rows.map(r => {
+      const s = r.signals || {};
+      const fill = (r.score / 6 * 100).toFixed(0);
+      let fillColor, dirBadge;
+      if (r.score >= 4)      { fillColor='var(--green)'; dirBadge=`<span class="badge badge-long">▲ LONG</span>`; }
+      else if (r.score <= 1) { fillColor='var(--red)';   dirBadge=`<span class="badge badge-short">▼ SHORT</span>`; }
+      else                   { fillColor='var(--yellow)'; dirBadge=`<span class="badge badge-hold">— HOLD</span>`; }
+
+      const typeBadge = r.is_crypto
+        ? `<span class="badge badge-crypto">🪙</span>`
+        : `<span class="badge badge-stock">📈</span>`;
+
+      const activeBadge = r.tradeable
+        ? `<span class="badge badge-long">✓ Live</span>`
+        : `<span class="badge badge-dim">Closed</span>`;
+
+      return `<tr>
+        <td><strong>${r.symbol}</strong></td>
+        <td>${typeBadge}</td>
+        <td>${dirBadge}</td>
+        <td>${r.score}/6</td>
+        <td>
+          <div class="score-bar-wrap">
+            <div class="score-bar">
+              <div class="score-bar-fill" style="width:${fill}%;background:${fillColor}"></div>
+            </div>
+          </div>
+        </td>
+        <td>${s.rsi??'—'}</td>
+        <td class="${(s.ret_5d||0)>=0?'up':'down'}">${s.ret_5d!=null?pct(s.ret_5d):'—'}</td>
+        <td class="${(s.ret_20d||0)>=0?'up':'down'}">${s.ret_20d!=null?pct(s.ret_20d):'—'}</td>
+        <td>${s.vol_ratio??'—'}</td>
+        <td>${s.macd_above_signal?'✅':'❌'}</td>
+        <td>${s.above_sma20?'✅':'❌'}</td>
+        <td>${activeBadge}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ── Bot controls ──────────────────────────────────────────────────────────
+
+  async function startBot() {
+    await fetch('/api/bot/start', { method: 'POST' });
+    setTimeout(refreshAll, 500);
+  }
+  async function stopBot() {
+    await fetch('/api/bot/stop', { method: 'POST' });
+    setTimeout(refreshAll, 500);
+  }
+  async function triggerScan() {
+    if (!confirm('Run a scan & trade cycle right now?')) return;
+    await fetch('/api/bot/scan', { method: 'POST' });
+    setTimeout(refreshAll, 5000);
+  }
+  async function triggerEod() {
+    if (!confirm('Close all STOCK positions now? Crypto stays open.')) return;
+    await fetch('/api/bot/eod', { method: 'POST' });
+    setTimeout(refreshAll, 2000);
+  }
+  async function triggerCloseAll() {
+    if (!confirm('Close ALL positions including crypto?')) return;
+    await fetch('/api/bot/close_all', { method: 'POST' });
+    setTimeout(refreshAll, 2000);
+  }
+
+  // ── Next scan ─────────────────────────────────────────────────────────────
+
+  function updateNextScan() {
+    const now  = new Date();
+    const m    = now.getMinutes();
+    const next = m < 30 ? 30 - m : 60 - m;
+    document.getElementById('next-scan').textContent = `in ~${next} min`;
+  }
+
+  // ── Log ───────────────────────────────────────────────────────────────────
+
+  let _lastLogCount = 0;
+  async function refreshLog() {
+    try {
+      const entries = await (await fetch('/api/log')).json();
+      if (entries.length === _lastLogCount) return;
+      _lastLogCount = entries.length;
+      document.getElementById('log-box').innerHTML = entries.map(e =>
+        `<div><span class="log-time">${e.time}</span><span class="log-${e.type}">${e.message}</span></div>`
+      ).join('');
+    } catch(e) {}
+  }
+
+  refreshAll();
+  setInterval(refreshAll, 15_000);
+</script>
+</body>
+</html>
