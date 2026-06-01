@@ -162,16 +162,16 @@
 
 <main>
 
-  <!-- Strategy bar -->
+  <!-- Strategy bar — values loaded live from settings -->
   <div class="strategy-bar">
-    <div class="stat-item">Capital cap<strong>$5,000</strong></div>
-    <div class="stat-item">Per trade<strong>$100</strong></div>
-    <div class="stat-item">Max trades<strong>~50</strong></div>
-    <div class="stat-item">Take profit<strong>+2%</strong></div>
-    <div class="stat-item">Stop loss<strong>−1%</strong></div>
-    <div class="stat-item">Scan interval<strong>30 min</strong></div>
-    <div class="stat-item">Long threshold<strong>≥ 4/6</strong></div>
-    <div class="stat-item">Short threshold<strong>≤ 1/6</strong></div>
+    <div class="stat-item">Capital cap<strong id="s-capital">—</strong></div>
+    <div class="stat-item">Per trade<strong id="s-size">—</strong></div>
+    <div class="stat-item">Take profit<strong id="s-tp">—</strong></div>
+    <div class="stat-item">Stop loss<strong id="s-sl">—</strong></div>
+    <div class="stat-item">Exit check<strong>every 15 s</strong></div>
+    <div class="stat-item">Scan interval<strong id="s-scan">—</strong></div>
+    <div class="stat-item">Long ≥<strong id="s-long">—</strong></div>
+    <div class="stat-item">Short ≤<strong id="s-short">—</strong></div>
     <div class="stat-item">Universe<strong id="universe-count">—</strong></div>
     <div class="stat-item">Next scan<strong id="next-scan">—</strong></div>
   </div>
@@ -296,6 +296,21 @@
   let _scanFilter = 'all';
 
   // ── Refresh all ───────────────────────────────────────────────────────────
+
+  async function refreshSettings() {
+    try {
+      const s = await (await fetch('/api/settings')).json();
+      document.getElementById('s-capital').textContent = '$' + Number(s.max_capital).toLocaleString();
+      document.getElementById('s-size').textContent    = '$' + s.position_size;
+      document.getElementById('s-tp').textContent      = '+' + s.take_profit_pct + '%';
+      document.getElementById('s-sl').textContent      = '−' + s.stop_loss_pct + '%';
+      document.getElementById('s-scan').textContent    = s.scan_interval_min + ' min';
+      document.getElementById('s-long').textContent    = s.long_threshold + '/6';
+      document.getElementById('s-short').textContent   = s.short_threshold + '/6';
+      const uni = (s.stock_universe || []).length + (s.crypto_universe || []).length;
+      document.getElementById('universe-count').textContent = uni + ' assets';
+    } catch(e) {}
+  }
 
   async function refreshAll() {
     try {
@@ -539,7 +554,9 @@
   }
 
   refreshAll();
+  refreshSettings();
   setInterval(refreshAll, 15_000);
+  setInterval(refreshSettings, 30_000);
 </script>
 </body>
 </html>

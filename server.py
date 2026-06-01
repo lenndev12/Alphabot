@@ -74,31 +74,49 @@ def logout():
 # ── Scheduler ─────────────────────────────────────────────────────────────────
 
 def _scheduler_loop():
+    """
+    Two parallel rhythms:
+    • Every 15 s  — check TP/SL exits (fast, no bar fetching)
+    • Every N min — full signal scan + new trades (N from settings)
+    """
     global _bot_running
-    import schedule as sched
-    sched.clear()
 
-    def _reschedule():
-        """Rebuild schedule from current settings."""
-        sched.clear()
-        interval = trading_bot.load_settings().get("scan_interval_min", 30)
-        sched.every(interval).minutes.do(trading_bot.scan_and_trade)
+    EXIT_INTERVAL = 15          # seconds between exit checks
+    last_scan     = 0.0         # epoch of last full scan
+    last_eod      = ""          # "HH:MM" of last EOD run
 
-        eod_time = trading_bot.load_settings().get("eod_time", "20:45")
-        for day in ["monday","tuesday","wednesday","thursday","friday"]:
-            getattr(sched.every(), day).at(eod_time).do(trading_bot.end_of_day_run)
-
-        sched.every().hour.do(trading_bot.print_portfolio_summary)
-        sched.every(60).minutes.do(_reschedule)  # reload settings every hour
-        _push_log(f"Scheduler active — scanning every {interval} min | EOD at {eod_time}", "info")
-
-    _reschedule()
+    _push_log("Bot started — exit checks every 15 s, signal scans per settings", "info")
 
     while _bot_running:
-        sched.run_pending()
-        time.sleep(20)
+        now      = time.time()
+        s        = trading_bot.load_settings()
+        scan_sec = s.get("scan_interval_min", 2) * 60
 
-    sched.clear()
+        # ── Fast exit check ───────────────────────────────────────────
+        try:
+            closed = trading_bot.check_exits()
+        except Exception as e:
+            log.error(f"Exit check error: {e}")
+
+        # ── Full scan (rate-limited to scan_interval_min) ─────────────
+        if now - last_scan >= scan_sec:
+            last_scan = now
+            try:
+                trading_bot.scan_and_trade()
+            except Exception as e:
+                log.error(f"Scan error: {e}")
+
+        # ── EOD check ─────────────────────────────────────────────────
+        hhmm = datetime.now().strftime("%H:%M")
+        if hhmm == s.get("eod_time", "20:45") and hhmm != last_eod:
+            last_eod = hhmm
+            try:
+                trading_bot.end_of_day_run()
+            except Exception as e:
+                log.error(f"EOD error: {e}")
+
+        time.sleep(EXIT_INTERVAL)
+
     _push_log("Bot stopped", "warn")
 
 # ── API: account / positions / orders ─────────────────────────────────────────

@@ -3,7 +3,7 @@
   "position_size": 100,
   "take_profit_pct": 2.0,
   "stop_loss_pct": 1.0,
-  "scan_interval_min": 30,
+  "scan_interval_min": 2,
   "long_threshold": 4,
   "short_threshold": 1,
   "enable_stocks": true,
