@@ -40,9 +40,53 @@ SETTINGS_FILE = Path(__file__).parent / "settings.json"
 
 # ── Settings ──────────────────────────────────────────────────────────────────
 
+DEFAULT_SETTINGS = {
+    "max_capital": 5000,
+    "position_size": 100,
+    "take_profit_pct": 2.0,
+    "stop_loss_pct": 1.0,
+    "scan_interval_min": 30,
+    "long_threshold": 4,
+    "short_threshold": 1,
+    "enable_stocks": True,
+    "enable_crypto": True,
+    "enable_memecoins": True,
+    "enable_shorts": True,
+    "eod_close_stocks": True,
+    "eod_time": "20:45",
+    "dashboard_user": "lennert",
+    "dashboard_password": "alphabot2024",
+    "stock_universe": [
+        "AAPL","MSFT","NVDA","GOOGL","META","AMZN","TSLA","AMD",
+        "JPM","BAC","GS","MS","C","V","MA","PYPL",
+        "XOM","CVX","OXY","UNH","PFE","MRNA","ABBV",
+        "NFLX","DIS","NKE","SBUX",
+        "SPY","QQQ","IWM","XLF","XLK","XLE","ARKK","SOXL",
+        "COIN","MSTR","PLTR","RBLX","SNAP","UBER","RIVN",
+        "HOOD","SOFI","AFRM","DKNG"
+    ],
+    "crypto_universe": [
+        "BTC/USD","ETH/USD","SOL/USD","AVAX/USD","LINK/USD",
+        "LTC/USD","BCH/USD","XRP/USD","UNI/USD","AAVE/USD",
+        "DOT/USD","MATIC/USD","DOGE/USD","SHIB/USD"
+    ]
+}
+
 def load_settings() -> dict:
+    if not SETTINGS_FILE.exists():
+        save_settings(DEFAULT_SETTINGS)
+        return DEFAULT_SETTINGS.copy()
     with open(SETTINGS_FILE) as f:
-        return json.load(f)
+        data = json.load(f)
+    # Fill in any missing keys with defaults (safe for future new settings)
+    updated = False
+    for k, v in DEFAULT_SETTINGS.items():
+        if k not in data:
+            data[k] = v
+            updated = True
+    if updated:
+        save_settings(data)
+    return data
 
 def save_settings(data: dict):
     with open(SETTINGS_FILE, "w") as f:

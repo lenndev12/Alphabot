@@ -1,0 +1,32 @@
+{
+  "max_capital": 5000,
+  "position_size": 100,
+  "take_profit_pct": 2.0,
+  "stop_loss_pct": 1.0,
+  "scan_interval_min": 30,
+  "long_threshold": 4,
+  "short_threshold": 1,
+  "enable_stocks": true,
+  "enable_crypto": true,
+  "enable_memecoins": true,
+  "enable_shorts": true,
+  "eod_close_stocks": true,
+  "eod_time": "20:45",
+  "dashboard_user": "lennert",
+  "dashboard_password": "alphabot2024",
+  "stock_universe": [
+    "AAPL","MSFT","NVDA","GOOGL","META","AMZN","TSLA","AMD",
+    "JPM","BAC","GS","MS","C","V","MA","PYPL",
+    "XOM","CVX","OXY",
+    "UNH","PFE","MRNA","ABBV",
+    "NFLX","DIS","NKE","SBUX",
+    "SPY","QQQ","IWM","XLF","XLK","XLE","ARKK","SOXL",
+    "COIN","MSTR","PLTR","RBLX","SNAP","UBER","RIVN",
+    "HOOD","SOFI","AFRM","DKNG"
+  ],
+  "crypto_universe": [
+    "BTC/USD","ETH/USD","SOL/USD","AVAX/USD","LINK/USD",
+    "LTC/USD","BCH/USD","XRP/USD","UNI/USD","AAVE/USD",
+    "DOT/USD","MATIC/USD","DOGE/USD","SHIB/USD"
+  ]
+}
