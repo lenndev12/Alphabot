@@ -144,23 +144,52 @@
         <input type="number" id="position_size" min="1" step="10" />
         <span class="hint">Dollar amount per individual trade</span>
       </div>
+      <div class="field">
+        <label>Max Open Positions</label>
+        <input type="number" id="max_positions" min="1" max="50" step="1" />
+        <span class="hint">Max simultaneous trades — lower = more selective</span>
+      </div>
+      <div class="field">
+        <label>Daily Loss Limit (%)</label>
+        <input type="number" id="daily_loss_limit" min="0.5" max="20" step="0.5" />
+        <span class="hint">Stop all new trades if today's loss exceeds this % of capital</span>
+      </div>
     </div>
   </div>
 
   <!-- TP/SL -->
   <div class="card">
     <div class="card-title">🎯 Take Profit & Stop Loss</div>
-    <div class="card-desc">Positions are automatically closed when these thresholds are hit.</div>
+    <div class="card-desc">Fixed % OR ATR-based (adapts to each asset's volatility — recommended).</div>
+    <div style="margin-bottom:14px">
+      <div class="toggle-row">
+        <div class="toggle-info">
+          <span>Use ATR-Based Stops (recommended)</span>
+          <small>Stops adapt to how volatile each asset is — smarter than fixed %</small>
+        </div>
+        <label class="switch"><input type="checkbox" id="use_atr_stops" /><span class="slider"></span></label>
+      </div>
+    </div>
     <div class="form-grid">
       <div class="field">
-        <label>Take Profit (%)</label>
-        <input type="number" id="take_profit_pct" min="0.1" max="100" step="0.1" />
-        <span class="hint">Close trade when profit reaches this %</span>
+        <label>ATR Stop Multiplier</label>
+        <input type="number" id="atr_stop_mult" min="0.5" max="5" step="0.1" />
+        <span class="hint">Stop = X × ATR below entry. Higher = wider stop</span>
       </div>
       <div class="field">
-        <label>Stop Loss (%)</label>
+        <label>ATR TP Multiplier</label>
+        <input type="number" id="atr_tp_mult" min="1" max="10" step="0.1" />
+        <span class="hint">TP = X × ATR above entry. Should be ≥ 2× stop mult</span>
+      </div>
+      <div class="field">
+        <label>Fixed Take Profit (%)</label>
+        <input type="number" id="take_profit_pct" min="0.1" max="100" step="0.1" />
+        <span class="hint">Used only when ATR stops are OFF</span>
+      </div>
+      <div class="field">
+        <label>Fixed Stop Loss (%)</label>
         <input type="number" id="stop_loss_pct" min="0.1" max="100" step="0.1" />
-        <span class="hint">Close trade when loss reaches this %</span>
+        <span class="hint">Used only when ATR stops are OFF</span>
       </div>
     </div>
   </div>
@@ -168,17 +197,17 @@
   <!-- Scan & Schedule -->
   <div class="card">
     <div class="card-title">⏱️ Scan Interval & Schedule</div>
-    <div class="card-desc">How often the bot scans for signals and when it closes stock positions.</div>
+    <div class="card-desc">Exit checks always run every 15 seconds. This controls how often the bot looks for NEW trades.</div>
     <div class="form-grid">
       <div class="field">
         <label>Scan Interval (minutes)</label>
         <input type="number" id="scan_interval_min" min="1" max="240" step="1" />
-        <span class="hint">How often the bot scans for new trades (crypto 24/7, stocks only during NYSE hours)</span>
+        <span class="hint">Every N minutes the bot scans for new entry signals</span>
       </div>
       <div class="field">
         <label>EOD Close Time (CEST)</label>
         <input type="time" id="eod_time" />
-        <span class="hint">Time to auto-close all stock positions (leave crypto running)</span>
+        <span class="hint">Auto-close all stock positions at this time</span>
       </div>
     </div>
   </div>
@@ -186,17 +215,17 @@
   <!-- Signal thresholds -->
   <div class="card">
     <div class="card-title">📡 Signal Thresholds</div>
-    <div class="card-desc">Scores are out of 6. Adjust to be more selective (higher long / lower short) or more aggressive (lower long / higher short).</div>
+    <div class="card-desc">Scores are out of 7. The bot only trades with the market trend (SPY above/below 50-day SMA). Higher long threshold = fewer but better trades.</div>
     <div class="form-grid">
       <div class="field">
         <label>Long Threshold (score ≥)</label>
-        <input type="number" id="long_threshold" min="1" max="6" step="1" />
-        <span class="hint">Min score to go LONG. Lower = more long trades</span>
+        <input type="number" id="long_threshold" min="1" max="7" step="1" />
+        <span class="hint">Recommended: 5. Lower = more trades, more risk</span>
       </div>
       <div class="field">
         <label>Short Threshold (score ≤)</label>
-        <input type="number" id="short_threshold" min="0" max="5" step="1" />
-        <span class="hint">Max score to go SHORT. Higher = more short trades</span>
+        <input type="number" id="short_threshold" min="0" max="6" step="1" />
+        <span class="hint">Recommended: 2. Higher = more short trades</span>
       </div>
     </div>
   </div>
@@ -285,14 +314,19 @@
     // Numbers
     document.getElementById('max_capital').value       = s.max_capital;
     document.getElementById('position_size').value     = s.position_size;
+    document.getElementById('max_positions').value     = s.max_positions ?? 8;
+    document.getElementById('daily_loss_limit').value  = s.daily_loss_limit ?? 2;
     document.getElementById('take_profit_pct').value   = s.take_profit_pct;
     document.getElementById('stop_loss_pct').value     = s.stop_loss_pct;
+    document.getElementById('atr_stop_mult').value     = s.atr_stop_mult ?? 1.5;
+    document.getElementById('atr_tp_mult').value       = s.atr_tp_mult ?? 3.0;
     document.getElementById('scan_interval_min').value = s.scan_interval_min;
     document.getElementById('long_threshold').value    = s.long_threshold;
     document.getElementById('short_threshold').value   = s.short_threshold;
     document.getElementById('eod_time').value          = s.eod_time;
 
     // Booleans
+    document.getElementById('use_atr_stops').checked     = s.use_atr_stops ?? true;
     document.getElementById('enable_stocks').checked     = s.enable_stocks;
     document.getElementById('enable_crypto').checked     = s.enable_crypto;
     document.getElementById('enable_memecoins').checked  = s.enable_memecoins;
@@ -316,13 +350,18 @@
     const payload = {
       max_capital:       parseFloat(document.getElementById('max_capital').value),
       position_size:     parseFloat(document.getElementById('position_size').value),
+      max_positions:     parseInt(document.getElementById('max_positions').value),
+      daily_loss_limit:  parseFloat(document.getElementById('daily_loss_limit').value),
       take_profit_pct:   parseFloat(document.getElementById('take_profit_pct').value),
       stop_loss_pct:     parseFloat(document.getElementById('stop_loss_pct').value),
+      atr_stop_mult:     parseFloat(document.getElementById('atr_stop_mult').value),
+      atr_tp_mult:       parseFloat(document.getElementById('atr_tp_mult').value),
       scan_interval_min: parseInt(document.getElementById('scan_interval_min').value),
       long_threshold:    parseInt(document.getElementById('long_threshold').value),
       short_threshold:   parseInt(document.getElementById('short_threshold').value),
       eod_time:          document.getElementById('eod_time').value,
 
+      use_atr_stops:     document.getElementById('use_atr_stops').checked,
       enable_stocks:     document.getElementById('enable_stocks').checked,
       enable_crypto:     document.getElementById('enable_crypto').checked,
       enable_memecoins:  document.getElementById('enable_memecoins').checked,

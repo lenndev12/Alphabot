@@ -152,6 +152,7 @@
     </nav>
   </div>
   <div class="header-right">
+    <div id="trend-badge" class="market-badge closed" style="margin-right:6px">Trend: —</div>
     <div id="market-badge" class="market-badge closed">NYSE Closed</div>
     <div id="bot-status" class="status-pill off">
       <span class="dot"></span><span id="status-text">Bot Stopped</span>
@@ -363,6 +364,13 @@
       const mb = document.getElementById('market-badge');
       mb.textContent = status.market_open ? 'NYSE Open' : 'NYSE Closed';
       mb.className   = 'market-badge' + (status.market_open ? '' : ' closed');
+
+      // Trend badge
+      const tb = document.getElementById('trend-badge');
+      const trend = status.trend || 'neutral';
+      tb.textContent = trend === 'bull' ? '📈 Bull Market' : trend === 'bear' ? '📉 Bear Market' : '↔️ Neutral';
+      tb.style.background = trend === 'bull' ? '#1c3a1c' : trend === 'bear' ? '#3a1c1c' : '#2a2a1c';
+      tb.style.color      = trend === 'bull' ? 'var(--green)' : trend === 'bear' ? 'var(--red)' : 'var(--yellow)';
 
       document.getElementById('last-refresh').textContent =
         'Last refresh: ' + new Date().toLocaleTimeString('nl-BE');

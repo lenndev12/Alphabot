@@ -198,10 +198,12 @@ def api_scan():
 def api_bot_status():
     s = trading_bot.load_settings()
     return jsonify({
-        "running":     _bot_running,
-        "market_open": trading_bot.is_market_open(),
-        "positions":   len(trading_bot.get_positions()),
-        "scan_interval": s.get("scan_interval_min", 30),
+        "running":       _bot_running,
+        "market_open":   trading_bot.is_market_open(),
+        "positions":     len(trading_bot.get_positions()),
+        "scan_interval": s.get("scan_interval_min", 5),
+        "trend":         trading_bot.get_market_trend(),
+        "daily_pl":      trading_bot._daily_stats.get("realised_pl", 0.0),
     })
 
 @app.route("/api/bot/start", methods=["POST"])

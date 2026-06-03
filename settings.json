@@ -1,11 +1,16 @@
 {
   "max_capital": 5000,
-  "position_size": 100,
-  "take_profit_pct": 2.0,
+  "position_size": 500,
+  "take_profit_pct": 3.0,
   "stop_loss_pct": 1.0,
-  "scan_interval_min": 2,
-  "long_threshold": 4,
-  "short_threshold": 1,
+  "use_atr_stops": true,
+  "atr_stop_mult": 1.5,
+  "atr_tp_mult": 3.0,
+  "scan_interval_min": 5,
+  "max_positions": 8,
+  "long_threshold": 5,
+  "short_threshold": 2,
+  "daily_loss_limit": 2.0,
   "enable_stocks": true,
   "enable_crypto": true,
   "enable_memecoins": true,
@@ -16,17 +21,12 @@
   "dashboard_password": "alphabot2024",
   "stock_universe": [
     "AAPL","MSFT","NVDA","GOOGL","META","AMZN","TSLA","AMD",
-    "JPM","BAC","GS","MS","C","V","MA","PYPL",
-    "XOM","CVX","OXY",
-    "UNH","PFE","MRNA","ABBV",
-    "NFLX","DIS","NKE","SBUX",
-    "SPY","QQQ","IWM","XLF","XLK","XLE","ARKK","SOXL",
-    "COIN","MSTR","PLTR","RBLX","SNAP","UBER","RIVN",
-    "HOOD","SOFI","AFRM","DKNG"
+    "JPM","GS","V","MA","XOM","UNH",
+    "SPY","QQQ","IWM","XLK","XLF","XLE",
+    "COIN","PLTR","MSTR","UBER","SOFI"
   ],
   "crypto_universe": [
-    "BTC/USD","ETH/USD","SOL/USD","AVAX/USD","LINK/USD",
-    "LTC/USD","BCH/USD","XRP/USD","UNI/USD","AAVE/USD",
-    "DOT/USD","MATIC/USD","DOGE/USD","SHIB/USD"
+    "BTC/USD","ETH/USD","SOL/USD","AVAX/USD",
+    "DOGE/USD","LINK/USD","XRP/USD","LTC/USD"
   ]
 }
